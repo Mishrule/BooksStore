@@ -10,7 +10,6 @@ namespace BookStoreApp.API.Models.User
     [Required]
     public string LastName { get; set; }
 
-
     [Required]
     public string Role { get; set; }
   }
