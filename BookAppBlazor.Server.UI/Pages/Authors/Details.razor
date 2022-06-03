@@ -1,0 +1,94 @@
+﻿@page "/authors/details/{id:int}"
+@inject IAuthorService authorService
+@inject NavigationManager navigationManager
+
+
+<h3>Author Details</h3>
+
+<div>
+    <fieldset disabled="true">
+        <div class="form-group">
+            <label for="firstname">First Name - @Author.FirstName</label> 
+            </div>
+        <br/>
+        <div class="form-group">
+            <label for="lastname">Last Name - @Author.LastName</label>
+            </div>
+        <br/>
+        <div class="form-group">
+            <label for="bio">Biography - @Author.Bio</label>
+        </div>
+        <br/>
+    </fieldset>
+
+@*    @if (Author.Books == null || Author.Books.Any() == false)
+    {
+        <div class = "alert alert-dismissible alert-secondary">
+            No Books for this Author
+        </div>
+    }
+    else
+    {
+        <div class = "row">
+            @foreach (var book in Author.Books)
+            {
+                <div class = "col-3">
+                    <div class = "card" style = "width: 18rem;">
+                        <img src = "@book.Image" class = "card-img-top" alt = "@book.Title" style = "width: 286px; height: 164px">
+                        <div class = "card-body">
+                            <h5 class = "card-title">@book.Title - @book.Price.ToString("C")</h5>
+                            <p class = "card-text"></p>
+                            <a href = "/books/details/@book.Id" class = "btn btn-primary">View Book</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }*@
+    <br/>
+    <button @onclick="GotoEdit" class="btn btn-warning">
+        <span class="oi oi-pencil"></span>
+        Edit Author
+    </button>
+
+    <button @onclick="BackToList" class="btn btn-outline-secondary">
+        <span class="oi oi-media-skip-backward"></span>
+        Back To List
+    </button>
+</div>
+
+@code{
+
+  [Parameter]
+  public int Id { get; set; }
+
+  private AuthorDetailsDto Author = new AuthorDetailsDto();
+  private bool isSuccess = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    try
+    {
+      var response = await authorService.Get(Id);
+      if (response.Success)
+      {
+        Author = response.Data;
+      }
+    }
+    catch (Exception ex)
+    {
+
+    }
+  }
+
+
+  private void BackToList()
+  {
+    navigationManager.NavigateTo("/authors/");
+  }
+
+  private void GotoEdit()
+  {
+    navigationManager.NavigateTo($"/authors/update/{Author.Id}");
+  }
+}

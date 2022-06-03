@@ -1,0 +1,87 @@
+﻿@page "/authors/"
+@inject IAuthorService authorService
+@inject IJSRuntime jsRuntime
+
+
+@if(@response.Success == false){
+<div class = "alert alert-info">
+  <h4>@response.Message</h4>
+</div>
+}
+else
+{
+@if (@Author == null)
+{
+  <div class = "alert alert-info">
+    <h4>Loading Data</h4>
+  </div>
+}
+else
+{
+  <a class = "btn btn-dark" href = "/authors/create"><span class = "oi oi-plus"></span>Create Author</a>
+  <table class = "table table-responsive">
+    <thead>
+    <tr>
+      <th>First Name</th>
+      <th>Last Name</th>
+      <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var author in Author)
+    {
+      <tr>
+        <td>@author.FirstName</td>
+        <td>@author.LastName</td>
+        <td>
+          <a href = "/authors/details/@author.Id" class = "btn btn-primary">
+            <span class = "oi oi-book"></span>
+          </a>
+          <AuthorizeView Roles = "Admin">
+            <a href = "/authors/upate/@author.Id" class = "btn btn-warning">
+              <span class = "oi oi-pencil"></span>
+            </a>
+            <button @onclick="@(()=>Delete(@author.Id))" class = "btn btn-danger">
+              <span class = "oi oi-delete"></span>
+            </button>
+          </AuthorizeView>
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+}
+}
+
+
+@code {
+  private List<AuthorReadOnlyDto> Author;
+  private Response<List<AuthorReadOnlyDto>> response = new Response<List<AuthorReadOnlyDto>>{Success = true};
+
+  protected override async Task OnInitializedAsync()
+  {
+     response = await authorService.Get();
+    if (response.Success)
+    {
+      Author = response.Data;
+    }
+    else
+    {
+    }
+  }
+
+  private async Task Delete(int authorid)
+  {
+    var autor = Author.First(q => q.Id == authorid);
+    var response = await authorService.Delete(authorid);
+    var confirm = await jsRuntime.InvokeAsync<bool>("confirm",$"Are you sure you want to delete this author {autor.FirstName} {autor.LastName}?");
+    if (confirm)
+    {
+      if (response.Success)
+      {
+        await OnInitializedAsync();
+      }
+    }
+    
+  }
+}

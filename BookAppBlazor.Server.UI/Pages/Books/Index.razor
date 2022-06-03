@@ -1,0 +1,91 @@
+﻿@page "/books/"
+@inject IBookService bookService
+@inject IJSRuntime jsRuntime
+
+
+@if(@response.Success == false){
+<div class = "alert alert-info">
+  <h4>@response.Message</h4>
+</div>
+}
+else
+{
+@if (Book == null)
+{
+  <div class = "alert alert-info">
+    <h4>Loading Data</h4>
+  </div>
+}
+else
+{
+  <a class = "btn btn-dark" href = "/authors/create"><span class = "oi oi-plus"></span>Create Author</a>
+  <table class = "table table-responsive">
+    <thead>
+    <tr>
+      <th></th>
+      <th>Title</th>
+      <th>Price</th>
+      <th>Author Name</th>
+      <th>Action</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var book in Book)
+    {
+      <tr>
+        <td><img src="@book.Image" width="100" height="100" alt="@book.Title"/></td>
+        <td>@book.Title</td>
+        <td>@book.Price?.ToString("C")</td>
+            <td>@book.AuthorName</td>
+        <td>
+          <a href = "/authors/details/@book.Id" class = "btn btn-primary">
+            <span class = "oi oi-book"></span>
+          </a>
+          <AuthorizeView Roles = "Admin">
+            <a href = "/authors/upate/@book.Id" class = "btn btn-warning">
+              <span class = "oi oi-pencil"></span>
+            </a>
+            <button @onclick = "@(() => Delete(book.Id))" class = "btn btn-danger">
+              <span class = "oi oi-delete"></span>
+            </button>
+          </AuthorizeView>
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+}
+}
+
+
+@code {
+  private List<BookReadOnlyDto> Book;
+  private Response<List<BookReadOnlyDto>> response = new Response<List<BookReadOnlyDto>>{Success = true};
+
+  protected override async Task OnInitializedAsync()
+  {
+     response = await bookService.Get();
+    if (response.Success)
+    {
+      Book = response.Data;
+    }
+    else
+    {
+    }
+  }
+
+  private async Task Delete(int bookId)
+  {
+    var book = Book.First(q => q.Id == bookId);
+    var response = await bookService.Delete(bookId);
+    var confirm = await jsRuntime.InvokeAsync<bool>("confirm",$"Are you sure you want to delete this author {book.AuthorName} {book.Title}?");
+    if (confirm)
+    {
+      if (response.Success)
+      {
+        await OnInitializedAsync();
+      }
+    }
+    
+  }
+}

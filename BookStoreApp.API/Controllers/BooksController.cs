@@ -9,23 +9,26 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BookStoreApp.API.Data;
 using BookStoreApp.API.Models.Book;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookStoreApp.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class BooksController : ControllerBase
     {
         private readonly BookStoreDbContext _context;
         private readonly IMapper _mapper;
+        private readonly IWebHostEnvironment _webHostEviroment;
 
-        public BooksController(BookStoreDbContext context, IMapper mapper)
+        public BooksController(BookStoreDbContext context, IMapper mapper, IWebHostEnvironment webHostEviroment)
         {
             _context = context;
             _mapper = mapper;
+            _webHostEviroment = webHostEviroment;
         }
-        
-
+       
         // GET: api/Books
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BookReadOnlyDto>>> GetBooks()
@@ -66,6 +69,7 @@ namespace BookStoreApp.API.Controllers
         // PUT: api/Books/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutBook(int id, BookUpdateDto bookDto)
         {
             if (id != bookDto.Id)
@@ -77,6 +81,17 @@ namespace BookStoreApp.API.Controllers
             if (book == null)
             {
                 return NotFound();
+            }
+
+            if (String.IsNullOrEmpty(bookDto.ImageData) == false)
+            {
+                bookDto.Image = CreateFile(bookDto.ImageData, bookDto.OriginalImage);
+                var picName = Path.GetFileName(book.Image);
+                var path = $"{_webHostEviroment.WebRootPath}\\bookcoverimages\\{picName}";
+                if (System.IO.File.Exists(path))
+                {
+                    System.IO.File.Delete(path);
+                }
             }
             _mapper.Map(bookDto, book);
             _context.Entry(book).State = EntityState.Modified;
@@ -103,13 +118,17 @@ namespace BookStoreApp.API.Controllers
         // POST: api/Books
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<BookCreateDto>> PostBook(BookCreateDto bookDto)
         {
           if (_context.Books == null)
           {
               return Problem("Entity set 'BookStoreDbContext.Books'  is null.");
           }
+
+         
             var book = _mapper.Map<Book>(bookDto);
+            book.Image = CreateFile(bookDto.ImageData, bookDto.OriginalImage);
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
 
@@ -118,6 +137,7 @@ namespace BookStoreApp.API.Controllers
 
         // DELETE: api/Books/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteBook(int id)
         {
             if (_context.Books == null)
@@ -140,5 +160,22 @@ namespace BookStoreApp.API.Controllers
         {
             return await _context.Books.AnyAsync(e => e.Id == id);
         }
+
+
+        private string CreateFile(string imageBase64, string imageName)
+        {
+            var url = HttpContext.Request.Host.Value;
+            var ext = Path.GetExtension(imageName);
+            var fileName = $"{Guid.NewGuid().ToString()}.{ext}";
+            
+            var path = $"{_webHostEviroment.WebRootPath}\\bookcoverimages\\{fileName}";
+
+            byte[] image = Convert.FromBase64String(imageBase64);
+            var fileStream = System.IO.File.Create(path);
+            fileStream.Write(image, 0, image.Length);
+
+            return $"https://{url}/bookcoverimages/{fileName}";
+        }
+
     }
 }
